@@ -13,6 +13,7 @@ import android.appwidget.AppWidgetProviderInfo;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
@@ -28,10 +29,11 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 public class HomeScreenActivity extends Activity {
-	private ViewPager mPager;
-	private RelativeLayout lout;
+	ViewPager mPager;
 	AppWidgetHost host;
-    @Override
+    ArrayList<View> mPagerEArray;
+	
+	@Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -41,34 +43,32 @@ public class HomeScreenActivity extends Activity {
         mPager.setAdapter(new BkPagerAdapter(getApplicationContext()));
         
         host = new AppWidgetHost(this, 0);
+        mPagerEArray=new ArrayList<View>();
+		for(int i=0;i<20;i++){
+			mPagerEArray.add(new RelativeLayout(this));
+			mPagerEArray.get(i).setBackgroundColor(Color.rgb((int)(Math.random()*256),(int)(Math.random()*256),(int)(Math.random()*256)));	//배경색 지정
+			registerForContextMenu(mPagerEArray.get(i));
 
+		}
     }
 
     //Pager 아답터 구현
     private class BkPagerAdapter extends PagerAdapter{
     	private LayoutInflater mInflater;
-    	
+    	private Context mContext;
     	public BkPagerAdapter( Context con) {
 			super();
 			mInflater = LayoutInflater.from(con);
+			mContext = con;
+
 		}
     	
-    	@Override public int getCount() { return 5; }	//여기서는 2개만 할 것이다.
+    	@Override public int getCount() { return mPagerEArray.size(); }	//여기서는 2개만 할 것이다.
     	
     	//뷰페이저에서 사용할 뷰객체 생성/등록
     	@Override public Object instantiateItem(View pager, int position) {
-    		View v = null;
-   // 		if(position==0){
-    			v = mInflater.inflate(R.layout.layout1, null);
-   // 		}
-   // 		else if(position==1){
-   // 			v = mInflater.inflate(R.layout.layout1, null); 
-   //		}
-   // 		else if(position==2){
-   // 			v = mInflater.inflate(R.layout.layout1, null);
-   // 		}
-    		registerForContextMenu(v);
-    		((ViewPager)pager).addView(v, position);
+    		View v = mPagerEArray.get(position);
+    		((ViewPager)pager).addView(v);
     		return v; 
     	}
     	
@@ -143,7 +143,11 @@ public class HomeScreenActivity extends Activity {
 		AppWidgetHostView hv = host.createView(this, id, info);
     	int page = mPager.getCurrentItem();
 		Log.i("AppWidget",Integer.toString(page));
-		((RelativeLayout)mPager.getChildAt(page)).addView(hv);
+        int [] dimensions =
+                getLauncherCellDimensions(info.minWidth, info.minHeight);
+
+		((RelativeLayout)mPagerEArray.get(page)).addView(hv,dimensions[0],dimensions[1]);
+		
     }
 
 	
@@ -153,4 +157,30 @@ public class HomeScreenActivity extends Activity {
         getMenuInflater().inflate(R.menu.home_screen, menu);
         return true;
     }
+
+
+
+	// Taken from CellLayout.java
+	public int[] getLauncherCellDimensions(int width, int height) {
+	    // Always assume we're working with the smallest span to make sure we
+	    // reserve enough space in both orientations.
+	    Resources resources = getResources();
+	    int cellWidth = resources.getDimensionPixelSize(R.dimen.workspace_cell_width);
+	    int cellHeight = resources.getDimensionPixelSize(R.dimen.workspace_cell_height);
+	    int widthGap = resources.getDimensionPixelSize(R.dimen.workspace_width_gap);
+	    int heightGap = resources.getDimensionPixelSize(R.dimen.workspace_height_gap);
+	    int previewCellSize = resources.getDimensionPixelSize(R.dimen.preview_cell_size);
+	
+	    // This logic imitates Launcher's CellLayout.rectToCell.
+	    // Always round up to next largest cell
+	    int smallerSize = Math.min(cellWidth, cellHeight);
+	    int spanX = (width + smallerSize) / smallerSize;
+	    int spanY = (height + smallerSize) / smallerSize;
+	
+	    // We use a fixed preview cell size so that you get the same preview image for
+	    // the same cell-sized widgets across all devices
+	    width = spanX * previewCellSize + ((spanX - 1) * widthGap);
+	    height = spanY * previewCellSize + ((spanY - 1) * heightGap);
+	    return new int[] { width, height };
+	}
 }
